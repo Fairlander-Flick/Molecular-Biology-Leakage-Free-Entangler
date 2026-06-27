@@ -95,28 +95,43 @@ def reduce_columns(mat):
 
 @njit(parallel=True, cache=True)
 def apc_mi(A, B):
-    """APC-corrected mutual information matrix between columns of A and B."""
+    """APC-corrected mutual information matrix between columns of A and B.
+    Marginals/means use explicit loops (numba does not accept axis= args)."""
     n, Ka = A.shape
     Kb = B.shape[1]
     mi = np.zeros((Ka, Kb))
     for i in prange(Ka):
+        pa = np.zeros(22); pb = np.zeros(22)
+        joint = np.zeros((22, 22))
         for j in range(Kb):
-            joint = np.zeros((22, 22))
+            joint[:] = 0.0; pa[:] = 0.0; pb[:] = 0.0
             for r in range(n):
                 joint[A[r, i], B[r, j]] += 1.0
-            joint /= n
-            pa = joint.sum(1); pb = joint.sum(0)
+            for x in range(22):
+                for y in range(22):
+                    joint[x, y] /= n
+                    pa[x] += joint[x, y]
+                    pb[y] += joint[x, y]
             m = 0.0
             for x in range(22):
                 for y in range(22):
                     if joint[x, y] > 0 and pa[x] > 0 and pb[y] > 0:
                         m += joint[x, y] * np.log(joint[x, y] / (pa[x] * pb[y]))
             mi[i, j] = m
-    # APC correction
-    mbar = mi.mean()
+    # APC correction with explicit means
+    ri = np.zeros(Ka); rj = np.zeros(Kb); tot = 0.0
+    for i in range(Ka):
+        for j in range(Kb):
+            ri[i] += mi[i, j]; rj[j] += mi[i, j]; tot += mi[i, j]
+    for i in range(Ka):
+        ri[i] /= Kb
+    for j in range(Kb):
+        rj[j] /= Ka
+    mbar = tot / (Ka * Kb)
     if mbar > 0:
-        ri = mi.mean(1).reshape(-1, 1); rj = mi.mean(0).reshape(1, -1)
-        mi = mi - (ri * rj) / mbar
+        for i in range(Ka):
+            for j in range(Kb):
+                mi[i, j] -= ri[i] * rj[j] / mbar
     return mi
 
 
