@@ -14,6 +14,7 @@ Outputs: coevo/coevo_{split}.npz  (X, y, ids, feat_names)  [shardable over pairs
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -24,7 +25,8 @@ from numba import njit, prange
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import dataset as D
 
-MSA = Path(__file__).resolve().parents[1] / "msa"
+MSA = Path(os.environ.get("PPI_MSA_DIR",
+                          str(Path(__file__).resolve().parents[1] / "msa" / "uniref50")))
 OUT = Path(__file__).resolve().parent
 TAXID_RE = re.compile(r"TaxID=(\d+)")
 K = 24                       # top-variable match columns kept per protein

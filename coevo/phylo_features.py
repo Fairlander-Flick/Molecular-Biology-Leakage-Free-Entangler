@@ -12,6 +12,7 @@ Outputs: coevo/phylo_{train,val,test}.npz  (X [n_pairs, F], y, ids, feat_names)
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +22,9 @@ from scipy import sparse
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import dataset as D
 
-MSA = Path(__file__).resolve().parents[1] / "msa"
+# PPI_MSA_DIR points at a search output dir (msa/sp or msa/uniref50) holding hits.tsv/a3m.
+MSA = Path(os.environ.get("PPI_MSA_DIR",
+                          str(Path(__file__).resolve().parents[1] / "msa" / "uniref50")))
 OUT = Path(__file__).resolve().parent
 FEATURES = ["n_a", "n_b", "n_shared", "jaccard", "overlap", "cosine_idf",
           "dot_idf", "pearson", "cond_ab", "cond_ba"]
