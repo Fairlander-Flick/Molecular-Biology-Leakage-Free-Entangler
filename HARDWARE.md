@@ -29,9 +29,12 @@ Confirmed on `tg080`: `NVIDIA GeForce RTX 3080`, 10240 MiB, driver 610.43.02.
 
 ## Availability at scan time
 
-- `a100`: **fully allocated** (`alloc`); probe queued — initially `(Priority)`, then `(AssocGrpGRES)` group GPU cap.
+- `a100`: **fully allocated** (`alloc`) and **inaccessible to our `dsaa` association** the whole
+  session — the probe stayed `PD (AssocGrpGRES)` (group A100 GPU cap saturated). Exact A100
+  VRAM therefore unconfirmed (TinyGPU A100 = 40 GB; left as the planning assumption).
 - `v100`: fully allocated.
-- `rtx3080`: **13 idle nodes** (5 idle + 1 mix in `rtx3080`, plus default `work` pool) → ideal for a parallel extraction array.
+- `rtx3080`: **13 idle nodes** (5 idle + 1 mix in `rtx3080`, plus default `work` pool) →
+  used for **both** the parallel extraction array **and** training (A100 fallback realised).
 
 ## Approved hardware-aware strategy (Step 1)
 
