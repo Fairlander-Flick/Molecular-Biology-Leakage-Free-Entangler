@@ -103,10 +103,10 @@ def apply_runtime_flags() -> None:
 # batch). ProstT5 (~3B) is heavier than ESM2 (650M); tuned conservative for 10 GB.
 EXTRACT_MAX_TOKENS = {"esm2": 4096, "prostt5": 1024}
 
-TRAIN_BATCH = {    # pair-samples per step (head over cached embeddings)
-    "a100": 256,
-    "rtx3080": 96,
-    "v100": 64,
+TRAIN_BATCH = {    # pair-samples per step. Cross-chain attention is O(B*La*Lb),
+    "a100": 48,    # so memory is dominated by per-residue length, not the head.
+    "rtx3080": 12, # dynamic length-padding keeps short-protein batches cheap.
+    "v100": 24,
 }
 
 NUM_WORKERS = int(os.environ.get("SLURM_CPUS_PER_TASK", 8))

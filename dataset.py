@@ -263,35 +263,53 @@ def extract(shard: int, num_shards: int,
 # 4. Merge shards -> final ragged-flat cache
 # --------------------------------------------------------------------------- #
 def merge(emb_dir: Path = C.EMB_DIR) -> None:
+    """Stream shards into the final cache without holding everything in RAM."""
     import h5py
     shards = sorted(emb_dir.glob("shard_*.h5"))
     if not shards:
         raise RuntimeError(f"no shards in {emb_dir}")
     print(f"[merge] {len(shards)} shards", flush=True)
-    ids, lengths, pooled, esm_parts, pro_parts = [], [], [], [], []
+
+    # pass 1: sizes
+    ids: list[str] = []
+    lengths_parts, n_res, n_prot = [], 0, 0
     for s in shards:
         with h5py.File(s, "r") as f:
+            L = f["lengths"][:]
+            lengths_parts.append(L)
             ids.extend(x.decode() for x in f["ids"][:])
-            lengths.append(f["lengths"][:])
-            pooled.append(f["pooled"][:])
-            esm_parts.append(f["esm2"][:])
-            pro_parts.append(f["prostt5"][:])
-    lengths = np.concatenate(lengths)
+            n_res += int(f["esm2"].shape[0])
+            n_prot += L.shape[0]
+    lengths = np.concatenate(lengths_parts)
     offsets = np.zeros(len(lengths) + 1, dtype=np.int64)
     offsets[1:] = np.cumsum(lengths)
+
+    # pass 2: pre-size datasets, copy slice by slice
     out = emb_dir / "embeddings.h5"
-    with h5py.File(out, "w") as f:
-        f.create_dataset("esm2", data=np.concatenate(esm_parts, 0), compression="lzf")
-        f.create_dataset("prostt5", data=np.concatenate(pro_parts, 0), compression="lzf")
-        f.create_dataset("pooled", data=np.concatenate(pooled, 0), compression="lzf")
-        f.create_dataset("lengths", data=lengths)
-        f.create_dataset("offsets", data=offsets)
-        f.create_dataset("ids", data=np.array(ids, dtype="S15"))
-        f.attrs["esm2_dim"] = C.ESM2_DIM
-        f.attrs["prostt5_dim"] = C.PROSTT5_DIM
-        f.attrs["cap"] = C.MAX_SEQ_LEN_EMB
-    print(f"[merge] wrote {out}: {len(ids)} proteins, "
-          f"{offsets[-1]} residues ({out.stat().st_size/1e9:.2f} GB)", flush=True)
+    with h5py.File(out, "w") as fo:
+        d_esm = fo.create_dataset("esm2", (n_res, C.ESM2_DIM), dtype="float16",
+                                  compression="lzf", chunks=(min(4096, n_res), C.ESM2_DIM))
+        d_pro = fo.create_dataset("prostt5", (n_res, C.PROSTT5_DIM), dtype="float16",
+                                  compression="lzf", chunks=(min(4096, n_res), C.PROSTT5_DIM))
+        d_pool = fo.create_dataset("pooled", (n_prot, 2 * (C.ESM2_DIM + C.PROSTT5_DIM)),
+                                   dtype="float16", compression="lzf")
+        r0 = p0 = 0
+        for s in shards:
+            with h5py.File(s, "r") as f:
+                e, pr, pl = f["esm2"][:], f["prostt5"][:], f["pooled"][:]
+            d_esm[r0:r0 + e.shape[0]] = e
+            d_pro[r0:r0 + pr.shape[0]] = pr
+            d_pool[p0:p0 + pl.shape[0]] = pl
+            r0 += e.shape[0]; p0 += pl.shape[0]
+            del e, pr, pl
+        fo.create_dataset("lengths", data=lengths)
+        fo.create_dataset("offsets", data=offsets)
+        fo.create_dataset("ids", data=np.array(ids, dtype="S15"))
+        fo.attrs["esm2_dim"] = C.ESM2_DIM
+        fo.attrs["prostt5_dim"] = C.PROSTT5_DIM
+        fo.attrs["cap"] = C.MAX_SEQ_LEN_EMB
+    print(f"[merge] wrote {out}: {len(ids)} proteins, {offsets[-1]} residues "
+          f"({out.stat().st_size/1e9:.2f} GB)", flush=True)
 
 
 # --------------------------------------------------------------------------- #
