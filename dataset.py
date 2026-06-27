@@ -170,7 +170,8 @@ def embed_esm2(seqs: list[str], device, max_tokens: int):
     import torch
     from transformers import AutoTokenizer, EsmModel
     tok = AutoTokenizer.from_pretrained(C.ESM2_MODEL)
-    model = EsmModel.from_pretrained(C.ESM2_MODEL).to(device).eval()
+    model = EsmModel.from_pretrained(
+        C.ESM2_MODEL, torch_dtype=torch.bfloat16).to(device).eval()
     out: list[np.ndarray] = [None] * len(seqs)
     with torch.no_grad():
         for idx in _length_batches(seqs, max_tokens):
@@ -191,14 +192,18 @@ def embed_prostt5(seqs: list[str], device, max_tokens: int):
     import torch
     from transformers import T5EncoderModel, T5Tokenizer
     tok = T5Tokenizer.from_pretrained(C.PROSTT5_MODEL, do_lower_case=False)
-    model = T5EncoderModel.from_pretrained(C.PROSTT5_MODEL).to(device).eval()
+    # ProstT5 ships only pytorch_model.bin; we pre-converted to safetensors to avoid
+    # the transformers torch<2.6 torch.load guard. Force the safetensors path.
+    model = T5EncoderModel.from_pretrained(
+        C.PROSTT5_MODEL, use_safetensors=True,
+        torch_dtype=torch.bfloat16).to(device).eval()   # 3B in fp32 = 11GB > 10GB card
     spaced = ["<AA2fold> " + " ".join(list(s)) for s in seqs]
     out: list[np.ndarray] = [None] * len(seqs)
     with torch.no_grad():
         for idx in _length_batches(seqs, max_tokens):
             batch = [spaced[i] for i in idx]
-            enc = tok.batch_encode_plus(batch, add_special_tokens=True,
-                                        padding="longest", return_tensors="pt").to(device)
+            enc = tok(batch, add_special_tokens=True,
+                      padding="longest", return_tensors="pt").to(device)
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                 hs = model(input_ids=enc["input_ids"],
                            attention_mask=enc["attention_mask"]).last_hidden_state

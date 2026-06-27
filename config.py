@@ -22,7 +22,7 @@ CONDA_PYTHON = WOODY / "software/private/conda/envs/kaggle/bin/python"
 HF_HOME = WOODY / "hf_cache"   # pre-staged ESM2/ProstT5 (compute nodes are offline)
 
 DATA_DIR = WOODY / "ppi-entangler/data"          # raw Bernett dataset
-EMB_DIR = WOODY / "ppi-entangler/embeddings"     # chunked HDF5 caches
+EMB_DIR = Path(os.environ.get("PPI_EMB_DIR", str(WOODY / "ppi-entangler/embeddings")))
 CKPT_DIR = WOODY / "ppi-entangler/checkpoints"
 RUN_DIR = PROJECT_ROOT / "runs"
 
@@ -30,7 +30,10 @@ RUN_DIR = PROJECT_ROOT / "runs"
 # Encoders
 # --------------------------------------------------------------------------- #
 ESM2_MODEL = "facebook/esm2_t33_650M_UR50D"   # 650M, 33 layers, dim 1280
-PROSTT5_MODEL = "Rostlab/ProstT5"             # ~3B, dim 1024 (3Di-aware)
+# ProstT5 ships only pytorch_model.bin; transformers 5.12 refuses torch.load on
+# torch<2.6. We pre-convert to safetensors into a standalone local dir and load
+# from there (avoids HF offline-cache resolution of the manually-added file).
+PROSTT5_MODEL = os.environ.get("PROSTT5_PATH", str(WOODY / "hf_cache/prostt5_local"))
 ESM2_DIM = 1280
 PROSTT5_DIM = 1024
 # Two-tier length policy: embed full up to the cap; longer proteins -> head512+tail512.
@@ -98,7 +101,7 @@ def apply_runtime_flags() -> None:
 # --------------------------------------------------------------------------- #
 # Length-bucketed extraction: token budget per forward pass (sum of residues in a
 # batch). ProstT5 (~3B) is heavier than ESM2 (650M); tuned conservative for 10 GB.
-EXTRACT_MAX_TOKENS = {"esm2": 4096, "prostt5": 1536}
+EXTRACT_MAX_TOKENS = {"esm2": 4096, "prostt5": 1024}
 
 TRAIN_BATCH = {    # pair-samples per step (head over cached embeddings)
     "a100": 256,

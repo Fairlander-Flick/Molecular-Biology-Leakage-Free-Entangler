@@ -20,6 +20,7 @@ PY=/home/woody/dsaa/dsaa115h/software/private/conda/envs/kaggle/bin/python
 export HF_HOME=/home/woody/dsaa/dsaa115h/hf_cache
 export HF_HUB_OFFLINE=1          # compute nodes have no internet
 export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True   # 10GB card: reduce fragmentation
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-8}
 
 cd "$REPO"
