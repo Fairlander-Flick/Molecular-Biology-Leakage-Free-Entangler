@@ -131,7 +131,11 @@ def build_manifest(data_dir: Path = C.DATA_DIR):
             else:
                 dropped += 1
         pairs_by_split[role] = kept
-    ordered = sorted(used, key=lambda p: len(seqs[p]))
+    # Deterministic across processes: break length ties by id. `used` is a set, so
+    # sorting by length alone leaves ties in hash-randomized order, which makes
+    # ordered[shard::N] partition INCONSISTENTLY across SLURM array tasks -> some
+    # proteins embedded twice and others never. Tie-break by id fixes it.
+    ordered = sorted(used, key=lambda p: (len(seqs[p]), p))
     print(f"[manifest] {len(ordered)} unique proteins | dropped {dropped} pairs "
           f"(missing seq) | " + " ".join(f"{r}={len(v)}" for r, v in pairs_by_split.items()),
           flush=True)
