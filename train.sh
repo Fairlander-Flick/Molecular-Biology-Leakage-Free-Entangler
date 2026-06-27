@@ -23,6 +23,10 @@ cd "$REPO"
 mkdir -p logs runs
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 
-# Note: torch.compile is left off by default — variable-length padded batches
-# trigger frequent recompilation. Add --compile explicitly if using static shapes.
-srun "$PY" train.py --preload "$@"
+# Notes:
+#  - torch.compile left off by default — variable-length padded batches recompile.
+#  - --preload NOT used: TinyGPU auto-scales RAM to #GPUs (~47GB for 1 RTX 3080),
+#    below the 27GB cache + worker overhead. Rely on OS page cache (reclaimable,
+#    won't OOM the cgroup) for fast repeat reads. Add --preload only on a node
+#    with enough RAM (e.g. multi-GPU alloc).
+srun "$PY" train.py "$@"

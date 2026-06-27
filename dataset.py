@@ -328,18 +328,21 @@ class PPIPairDataset:
         import h5py
         import torch
         self.torch = torch
-        emb_path = emb_path or (C.EMB_DIR / "embeddings.h5")
+        self.emb_path = str(emb_path or (C.EMB_DIR / "embeddings.h5"))
         pairs_by_split, _, _ = build_manifest(data_dir)
-        self.f = h5py.File(emb_path, "r")
-        self.ids = [x.decode() for x in self.f["ids"][:]]
+        # Read only small metadata up front; close the handle so it is not
+        # inherited across DataLoader fork (h5py handles are NOT fork-safe).
+        with h5py.File(self.emb_path, "r") as f:
+            self.ids = [x.decode() for x in f["ids"][:]]
+            self.offsets = f["offsets"][:]
+            self.pooled = f["pooled"][:]          # 11k x 4608 fp16 ~101MB
+            if preload:                            # 27GB — only with enough RAM
+                self.esm2 = f["esm2"][:]
+                self.prostt5 = f["prostt5"][:]
         self.id2row = {p: i for i, p in enumerate(self.ids)}
-        self.offsets = self.f["offsets"][:]
-        self.pooled = self.f["pooled"][:]
         self.max_len = max_len
         self.preload = preload
-        if preload:
-            self.esm2 = self.f["esm2"][:]
-            self.prostt5 = self.f["prostt5"][:]
+        self.f = None                              # opened lazily per worker
         self.pairs = [(a, b, y) for a, b, y in pairs_by_split[split]
                       if a in self.id2row and b in self.id2row]
 
@@ -349,6 +352,9 @@ class PPIPairDataset:
             o1 = o0 + self.max_len
         if self.preload:
             return self.esm2[o0:o1], self.prostt5[o0:o1]
+        if self.f is None:                         # per-process (fork-safe) open
+            import h5py
+            self.f = h5py.File(self.emb_path, "r")
         return self.f["esm2"][o0:o1], self.f["prostt5"][o0:o1]
 
     def __len__(self):
