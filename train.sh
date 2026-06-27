@@ -23,4 +23,6 @@ cd "$REPO"
 mkdir -p logs runs
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 
-srun "$PY" train.py --epochs 50 --compile --preload --patience 10 "$@"
+# Note: torch.compile is left off by default — variable-length padded batches
+# trigger frequent recompilation. Add --compile explicitly if using static shapes.
+srun "$PY" train.py --preload "$@"
