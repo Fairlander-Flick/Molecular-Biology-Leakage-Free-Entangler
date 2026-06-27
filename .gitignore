@@ -1,0 +1,27 @@
+# Cached embeddings / data
+*.h5
+*.hdf5
+*.npy
+*.npz
+data/
+embeddings/
+checkpoints/
+*.pt
+*.ckpt
+
+# SLURM logs / scratch
+*.out
+*.err
+slurm-*.out
+.a100_jid
+__pycache__/
+*.pyc
+
+# Outputs (figures committed explicitly when final)
+runs/
+logs/
+wandb/
+
+# Env
+.env
+.venv/
