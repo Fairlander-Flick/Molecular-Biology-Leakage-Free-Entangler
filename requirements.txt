@@ -1,0 +1,11 @@
+# Core (present in conda env `kaggle`)
+torch==2.5.1            # +cu121
+transformers==5.12.0
+h5py
+numpy
+# ProstT5 (T5) tokenizer needs these
+sentencepiece>=0.2.0
+protobuf
+# Metrics / viz (Step 5)
+scikit-learn
+matplotlib

@@ -19,6 +19,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 WOODY = Path("/home/woody/dsaa/dsaa115h")
 CONDA_PYTHON = WOODY / "software/private/conda/envs/kaggle/bin/python"
+HF_HOME = WOODY / "hf_cache"   # pre-staged ESM2/ProstT5 (compute nodes are offline)
 
 DATA_DIR = WOODY / "ppi-entangler/data"          # raw Bernett dataset
 EMB_DIR = WOODY / "ppi-entangler/embeddings"     # chunked HDF5 caches
@@ -32,7 +33,12 @@ ESM2_MODEL = "facebook/esm2_t33_650M_UR50D"   # 650M, 33 layers, dim 1280
 PROSTT5_MODEL = "Rostlab/ProstT5"             # ~3B, dim 1024 (3Di-aware)
 ESM2_DIM = 1280
 PROSTT5_DIM = 1024
-MAX_SEQ_LEN = 512   # multi-scale CNN spans receptive fields 16 -> 512
+# Two-tier length policy: embed full up to the cap; longer proteins -> head512+tail512.
+# Cap 1024 covers full length for 85.7% of proteins (vs 55.7% at 512).
+MAX_SEQ_LEN_EMB = 1024   # per-residue embedding cap at extraction time
+MAX_SEQ_LEN = 1024       # per-residue length fed to the model (cross-attention)
+CNN_SCALE_MIN = 16       # multi-scale CNN spans receptive fields 16 -> 512
+CNN_SCALE_MAX = 512
 
 
 # --------------------------------------------------------------------------- #
@@ -90,11 +96,9 @@ def apply_runtime_flags() -> None:
 #   Extraction is VRAM-bound (PLM weights + L x D per-residue tensors);
 #   training runs over small cached embeddings, so batches can be large.
 # --------------------------------------------------------------------------- #
-EXTRACT_BATCH = {  # sequences per forward pass, keyed by partition
-    "rtx3080": {"esm2": 8,  "prostt5": 4},   # 10 GB: chunk long seqs
-    "a100":    {"esm2": 64, "prostt5": 32},
-    "v100":    {"esm2": 16, "prostt5": 8},
-}
+# Length-bucketed extraction: token budget per forward pass (sum of residues in a
+# batch). ProstT5 (~3B) is heavier than ESM2 (650M); tuned conservative for 10 GB.
+EXTRACT_MAX_TOKENS = {"esm2": 4096, "prostt5": 1536}
 
 TRAIN_BATCH = {    # pair-samples per step (head over cached embeddings)
     "a100": 256,
