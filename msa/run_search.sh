@@ -2,7 +2,7 @@
 #SBATCH --job-name=ppi-mmseqs
 #SBATCH --partition=rtx3080
 #SBATCH --gres=gpu:rtx3080:1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=8
 #SBATCH --time=12:00:00
 #SBATCH --output=logs/mmseqs_%j.out
 # (TinyGPU requires a GPU allocation even for CPU-only mmseqs; the GPU is idle here.)
