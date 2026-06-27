@@ -112,17 +112,33 @@ def move(batch, device):
     return {k: v.to(device, non_blocking=True) for k, v in batch.items()}
 
 
+def ablate(batch, mode):
+    """Zero a modality for the embedding ablation. pooled layout =
+    [esm_mean(1280) esm_max(1280) | pro_mean(1024) pro_max(1024)] -> esm = [:2560]."""
+    if mode == "full":
+        return batch
+    if mode == "esm":          # keep ESM2, drop ProstT5
+        for k in ("pro_a", "pro_b"):
+            batch[k] = torch.zeros_like(batch[k])
+        batch["pool_a"][:, 2560:] = 0; batch["pool_b"][:, 2560:] = 0
+    elif mode == "prostt5":    # keep ProstT5, drop ESM2
+        for k in ("esm_a", "esm_b"):
+            batch[k] = torch.zeros_like(batch[k])
+        batch["pool_a"][:, :2560] = 0; batch["pool_b"][:, :2560] = 0
+    return batch
+
+
 def forward_logits(model, b):
     return model(b["esm_a"], b["pro_a"], b["mask_a"],
                  b["esm_b"], b["pro_b"], b["mask_b"], b["pool_a"], b["pool_b"])
 
 
 @torch.no_grad()
-def evaluate(model, loader, device, degree=None):
+def evaluate(model, loader, device, degree=None, ablation="full"):
     model.eval()
     ys, ps = [], []
     for b in loader:
-        b = move(b, device)
+        b = ablate(move(b, device), ablation)
         with torch.autocast("cuda", dtype=torch.bfloat16):
             out = forward_logits(model, b)
         ps.append(torch.sigmoid(out["logit"]).float().cpu().numpy())
@@ -156,6 +172,7 @@ def main():
     ap.add_argument("--compile", action="store_true")
     ap.add_argument("--workers", type=int, default=C.NUM_WORKERS)
     ap.add_argument("--limit", type=int, default=0, help="debug: cap pairs/split")
+    ap.add_argument("--ablation", choices=["full","esm","prostt5"], default="full")
     ap.add_argument("--out", type=str, default=str(C.RUN_DIR / "bmse"))
     a = ap.parse_args()
 
@@ -204,7 +221,7 @@ def main():
     for ep in range(a.epochs):
         model.train(); t0 = time.time(); tot = 0.0
         for b in loaders["train"]:
-            b = move(b, device)
+            b = ablate(move(b, device), a.ablation)
             opt.zero_grad(set_to_none=True)
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 out = forward_logits(model, b)
@@ -221,7 +238,7 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step(); sched.step()
             tot += float(loss)
-        vm, *_ = evaluate(model, loaders["val"], device, deg["val"])
+        vm, *_ = evaluate(model, loaders["val"], device, deg["val"], a.ablation)
         rec = {"epoch": ep, "train_loss": tot / len(loaders["train"]),
                "lr": sched.get_last_lr()[0], "time_s": round(time.time() - t0), **{f"val_{k}": v for k, v in vm.items()}}
         history.append(rec)
@@ -244,7 +261,7 @@ def main():
     # final test with best checkpoint
     ck = torch.load(outdir / "best.pt", map_location=device)
     getattr(model, "_orig_mod", model).load_state_dict(ck["model"])
-    tm, y, p = evaluate(model, loaders["test"], device, deg["test"])
+    tm, y, p = evaluate(model, loaders["test"], device, deg["test"], a.ablation)
     print(f"[TEST] acc={tm['acc']:.4f} f1={tm['f1']:.4f} mcc={tm['mcc']:.4f} "
           f"auroc={tm['auroc']:.4f} auprc={tm['auprc']:.4f} "
           f"deg_corr={tm.get('degree_corr',0):.3f}", flush=True)
