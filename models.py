@@ -169,7 +169,8 @@ class BMSE(nn.Module):
 
         inter = torch.cat([da, db, (da - db).abs(), da * db], dim=-1)
         h = self.head(inter)
-        return {"logit": self.classifier(h).squeeze(-1), "proj": self.proj(h)}
+        # `feat` = penultimate representation, exported for the fusion model (Track A+B).
+        return {"logit": self.classifier(h).squeeze(-1), "proj": self.proj(h), "feat": h}
 
 
 def build_model(**kw) -> BMSE:
