@@ -25,3 +25,17 @@ wandb/
 # Env
 .env
 .venv/
+
+# Track A/B intermediates (regenerable / large)
+msa/queries.fasta
+msa/a3m/
+msa/hits.tsv
+msa/*DB*
+msa/tmp/
+msa/*.log
+struct/desc_shard_*.npz
+struct/*.log
+coevo/*.npz
+struct/struct_*.npz
+fusion/*.npz
+dbs/
