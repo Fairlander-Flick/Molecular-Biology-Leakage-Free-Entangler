@@ -1,9 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=ppi-mmseqs
-#SBATCH --partition=work
-#SBATCH --cpus-per-task=32
+#SBATCH --partition=rtx3080
+#SBATCH --gres=gpu:rtx3080:1
+#SBATCH --cpus-per-task=16
 #SBATCH --time=12:00:00
 #SBATCH --output=logs/mmseqs_%j.out
+# (TinyGPU requires a GPU allocation even for CPU-only mmseqs; the GPU is idle here.)
 #
 # mmseqs search of all 11,018 query proteins vs a target seqTaxDB, producing both
 # Track-A inputs:  hits.tsv (taxonomy -> phylo profiling) and a3m/ (-> coevolution).
