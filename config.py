@@ -34,6 +34,8 @@ ESM2_MODEL = "facebook/esm2_t33_650M_UR50D"   # 650M, 33 layers, dim 1280
 # torch<2.6. We pre-convert to safetensors into a standalone local dir and load
 # from there (avoids HF offline-cache resolution of the manually-added file).
 PROSTT5_MODEL = os.environ.get("PROSTT5_PATH", str(WOODY / "hf_cache/prostt5_local"))
+# ESMFold (Track B) — same .bin/torch<2.6 issue; pre-converted to a local safetensors dir.
+ESMFOLD_MODEL = os.environ.get("ESMFOLD_PATH", str(WOODY / "hf_cache/esmfold_local"))
 ESM2_DIM = 1280
 PROSTT5_DIM = 1024
 # Two-tier length policy: embed full up to the cap; longer proteins -> head512+tail512.
