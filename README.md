@@ -36,13 +36,34 @@ for the live hardware scan. Approved strategy:
 
 Central knobs live in [`config.py`](config.py).
 
+## Status & headline result
+
+The **BMSE baseline clears the 0.65 barrier**, leakage-clean:
+
+| Model | Test Acc | AUROC | AUPRC | MCC | leakage (degree_corr) |
+|-------|---------:|------:|------:|----:|----------------------:|
+| **BMSE (ESM2+ProstT5)** | **0.660** | **0.722** | 0.708 | 0.320 | −0.01 (clean) |
+
+A pairwise-signal effort (co-evolution + structure, Tracks A/B) was built and
+tested to push toward 0.71; so far the orthogonal signals add little on this
+leakage-free split. Full chronological record, ablations, and the critical
+sharding-bug fix are in [`RESULTS.md`](RESULTS.md); resume steps in
+[`RUNBOOK.md`](RUNBOOK.md).
+
 ## Pipeline stages
 
-1. **Hardware profiling & repo init** — `gpu_profile.py`, `config.py` (this commit).
-2. **Dataset & embedding extraction** — `dataset.py` → chunked HDF5 cache.
-3. **Architecture** — `models.py` (BMSE: Cross-Chain Attention + Multi-Scale CNN).
-4. **Training** — `train.py` (AMP, AdamW, contrastive segment-shuffle, taxonomy debiasing).
-5. **Validation & visualization** — `visualize.py` (Loss/Acc/F1/MCC/AUROC/AUPRC + curves).
+1. **Hardware profiling & repo init** — `gpu_profile.py`, `config.py`. ✅
+2. **Dataset & embedding extraction** — `dataset.py` → ragged-flat HDF5 cache. ✅
+3. **Architecture** — `models.py` (BMSE: Cross-Chain Attention + Multi-Scale CNN). ✅
+4. **Training** — `train.py` (bf16 AMP, AdamW, contrastive segment-shuffle, degree-debias check). ✅
+5. **Validation & visualization** — `visualize.py` (Loss/Acc/F1/MCC/AUROC/AUPRC + curves). ✅
+
+**Barrier-breaking tracks (toward 0.71):**
+- **Track A — co-evolution / phylogenetic profiling** (`msa/`, `coevo/`): mmseqs vs
+  UniRef50/Swiss-Prot → `phylo_features.py`, `coevo_features.py`.
+- **Track B — structure** (`struct/`): ESMFold infeasible on 10 GB → ESM2 contact-map
+  descriptors (`contacts.py`).
+- **Fusion** (`fusion/`): LightGBM stacking BMSE + phylo + structure + coevolution.
 
 ## Environment
 
