@@ -13,6 +13,11 @@ export HF_HOME=/home/woody/dsaa/dsaa115h/hf_cache HF_HUB_OFFLINE=1 \
 # rtx3080 partition only (a100/v100 inaccessible). No --mem on GPU jobs.
 ```
 
+## NEXT OBJECTIVE → ~0.75 (see ROADMAP.md)
+Move to a less-adversarial-but-legitimate benchmark (dataset with overlapping
+proteins → C2 regime) + tune/ensemble; report per split regime. Bernett-strict (C3)
+honest ceiling is ~0.68 — 0.75 there would be leakage.
+
 ## Headline result (clean cache)
 **BMSE test: acc 0.660 / AUROC 0.722 / AUPRC 0.708 / MCC 0.320, degree_corr −0.01
 (leakage-clean) → clears 0.65.** Best ckpt `runs/bmse2/best.pt`. See `RESULTS.md`.

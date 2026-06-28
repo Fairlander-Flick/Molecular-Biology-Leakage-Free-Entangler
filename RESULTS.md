@@ -102,4 +102,21 @@ co-evolution (UniRef50 + DCA), which the evidence so far does not strongly suppo
   h5py handles not fork-safe → open lazily per worker. ESM2 `predict_contacts`
   needs `attn_implementation="eager"`.
 
+## Current situation (live)
+- BMSE clean result locked: **0.660 acc / 0.722 AUROC** (`runs/bmse2/best.pt`).
+- Coevolution (paired-MSA MI on Swiss-Prot) still computing in the background.
+- No new signal expected to clear 0.71 on this (C3) split.
+
+## Next objective — push to ~0.75 (decided)
+0.75 is governed by the benchmark's split difficulty, not the model. We move to a
+legitimate less-adversarial benchmark and report per regime. Full plan in
+`ROADMAP.md`. Summary:
+1. Acquire a human PPI dataset with overlapping proteins (HIPPIE / HuRI / BioGRID /
+   STRING-physical).
+2. Build C1/C2/C3 splits; target **C2** ("new partner of a known protein", honest
+   ~0.74–0.80).
+3. Run this pipeline unchanged + tune/ensemble (we're undertuned, best epoch #2).
+4. Report C1/C2/C3 side by side; keep the degree-leakage check; no topology/GO/STRING
+   features. Optional proof-of-mechanism: random-split retrain of current data → ~0.80.
+
 See `RUNBOOK.md` for exact resume steps; memory `ppi-entangler-runbook` for handoff.

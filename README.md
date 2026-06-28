@@ -44,11 +44,30 @@ The **BMSE baseline clears the 0.65 barrier**, leakage-clean:
 |-------|---------:|------:|------:|----:|----------------------:|
 | **BMSE (ESM2+ProstT5)** | **0.660** | **0.722** | 0.708 | 0.320 | −0.01 (clean) |
 
-A pairwise-signal effort (co-evolution + structure, Tracks A/B) was built and
-tested to push toward 0.71; so far the orthogonal signals add little on this
-leakage-free split. Full chronological record, ablations, and the critical
-sharding-bug fix are in [`RESULTS.md`](RESULTS.md); resume steps in
-[`RUNBOOK.md`](RUNBOOK.md).
+## Progress so far — what we did → what we got
+
+| # | Step | What we did | What we got |
+|---|------|-------------|-------------|
+| 1 | Hardware/repo | Profiled TinyGPU; chose RTX 3080 array + bf16/TF32 | a100/v100 inaccessible → all on RTX 3080 |
+| 2 | Data + embeddings | Bernett v3; ESM2+ProstT5 per-residue, two-tier 1024; 32-shard array | `embeddings.h5` — 11,018 proteins, 5.82 M residues, 26.9 GB |
+| 3 | Model | BMSE: bilingual fusion + multi-scale CNN + cross-chain attention | 4.85 M params |
+| 4 | Training | bf16 AMP, AdamW, contrastive segment-shuffle, degree-debias | first (buggy) test acc 0.642 |
+| 5 | **Bug found+fixed** | Nondeterministic set-ordering halved shard coverage (7,429/11,018) → tie-break by id; re-extract + retrain | cache 11,018/11,018 unique; **test acc 0.642 → 0.660** |
+| 6 | Headline | Clean BMSE on full benchmark | **acc 0.660 / AUROC 0.722 / MCC 0.320, leakage-clean** |
+| 7 | Track A (co-evolution) | mmseqs Swiss-Prot search; phylo-profile features | phylo standalone AUROC **0.537** (weak); coevo MI computing |
+| 8 | Track B (structure) | ESMFold infeasible on 10 GB → ESM2 contact maps | structure-only ≈ **random (0.518)** |
+| 9 | Fusion | LightGBM stack BMSE + phylo + structure | ≈ BMSE alone (orthogonal tracks add ~0) |
+
+**Conclusion:** on Bernett-strict (C3) the orthogonal signals don't help — ~0.66–0.68
+is the honest ceiling for sequence methods. Full detail in [`RESULTS.md`](RESULTS.md).
+
+## Next objective → ~0.75 (see [`ROADMAP.md`](ROADMAP.md))
+
+0.75 is a property of the split's difficulty, not the model. Next we move to a
+legitimate, less-adversarial benchmark (a dataset with overlapping proteins →
+the **C2 regime**, "predict new partners of a known protein"), run this same
+pipeline, tune + ensemble, and **report per split regime** so every number carries
+its context. Resume commands in [`RUNBOOK.md`](RUNBOOK.md).
 
 ## Pipeline stages
 
