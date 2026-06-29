@@ -13,10 +13,26 @@ export HF_HOME=/home/woody/dsaa/dsaa115h/hf_cache HF_HUB_OFFLINE=1 \
 # rtx3080 partition only (a100/v100 inaccessible). No --mem on GPU jobs.
 ```
 
-## NEXT OBJECTIVE → ~0.75 (see ROADMAP.md)
-Move to a less-adversarial-but-legitimate benchmark (dataset with overlapping
-proteins → C2 regime) + tune/ensemble; report per split regime. Bernett-strict (C3)
-honest ceiling is ~0.68 — 0.75 there would be leakage.
+## NEXT OBJECTIVE → C1/C2/C3 regime sweep on our own cache (see ROADMAP.md)
+No HIPPIE needed — the full leakage-regime curve is built from the existing cache
+by re-partitioning (`resplit.py` → `splits/{c1,c2}`, read via `PPI_SPLIT_DIR`).
+
+**LIVE (2026-06-29):** jobs **C1=1723438 → runs/c1**, **C2=1723439 → runs/c2**
+(rtx3080, `--epochs 12 --patience 3 --time 20:00:00`). ~75 min/epoch, model peaks
+~epoch 2, so ~7 h to clean test-eval. Resume:
+```bash
+squeue -u dsaa115h                       # are c1/c2 still running?
+PY=/home/woody/.../kaggle/bin/python
+$PY regime_curve.py                      # assemble table + regime_curve.png
+# if a job died before writing test_metrics.json: resubmit (see launch cmd below)
+SPL=$PWD/splits
+sbatch -p rtx3080 --gres=gpu:rtx3080:1 --cpus-per-task=8 --time=20:00:00 \
+  --export=ALL,HF_HUB_OFFLINE=1,PPI_SPLIT_DIR=$SPL/c1 train.sh --out runs/c1 \
+  --epochs 12 --patience 3
+```
+Then: tune + 5-seed ensemble the **C2** point (undertuned — best epoch #2). Bernett
+-strict (C3) honest ceiling ~0.68 — 0.75 there would be leakage; C2 is the realistic
+target (~0.74), C1 is the homology-leaking proof-of-mechanism (~0.80).
 
 ## Headline result (clean cache)
 **BMSE test: acc 0.660 / AUROC 0.722 / AUPRC 0.708 / MCC 0.320, degree_corr −0.01

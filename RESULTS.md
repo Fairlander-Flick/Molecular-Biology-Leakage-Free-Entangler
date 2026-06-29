@@ -120,3 +120,36 @@ legitimate less-adversarial benchmark and report per regime. Full plan in
    features. Optional proof-of-mechanism: random-split retrain of current data → ~0.80.
 
 See `RUNBOOK.md` for exact resume steps; memory `ppi-entangler-runbook` for handoff.
+
+## Session 2026-06-29 — C1/C2/C3 regime sweep launched (on our own cache)
+Reframed the "next objective." We do **not** need HIPPIE: the full leakage-regime
+sweep is constructible from the existing cache (same 11,018 proteins, same 26.9 GB
+embeddings). Steps taken this session:
+
+1. **`dataset.py`** — added env-gated `PPI_SPLIT_DIR` hook: if set, `PPIPairDataset`
+   reads pairs from `{dir}/{split}.tsv` instead of the default Bernett manifest.
+   Non-invasive; default path (the 0.660 pipeline) is byte-identical.
+2. **`resplit.py`** (new) — pools all 274,327 edges / 11,018 proteins and writes:
+   - **C1** = random edge split (test **99.6% both-seen** — verified). Sizes match
+     the original (train 163,192 / val 59,260 / test 51,875).
+   - **C2** = random **15% novel-protein** holdout (1,653 proteins). Train = edges
+     with both endpoints seen; val/test = edges with **exactly one** novel endpoint
+     (6,008 both-novel edges dropped). Leakage check: 37/34,819 "violations" are
+     subsampling artifacts (a non-novel endpoint not sampled into train), **not**
+     leakage — novel proteins never enter train by construction.
+   - C3 = the original Bernett strict split, already done (`runs/bmse2`, 0.660).
+3. **`regime_curve.py`** (new) — reads `test_metrics.json` from `runs/{c1,c2,bmse2}`,
+   prints the markdown regime table, saves `regime_curve.png`. Safe to run while
+   jobs train (skips pending runs).
+4. **Timing lesson** — each epoch is **~75 min** on rtx3080 (batch 12, MAX_SEQ_LEN
+   1024, no preload), and the model **peaks at epoch 2** then overfits
+   (`best_epoch=2` historically). First C1/C2 submission used the default
+   `--epochs 50 --patience 10`, which would hit the 8 h wall ~epoch 6 and be
+   **killed before the post-loop test-eval ever writes `test_metrics.json`**.
+   Cancelled and **resubmitted with `--epochs 12 --patience 3 --time 20:00:00`**
+   (jobs **C1=1723438, C2=1723439**) so they early-stop ~epoch 5, eval, exit clean
+   in ~7 h.
+
+**Expected:** C1 ≈ 0.78–0.82 (proof of mechanism — 0.66 is a split ceiling, not a
+model ceiling), C2 ≈ 0.70–0.74 (the honest realistic operating point). Then tune +
+5-seed ensemble on C2.

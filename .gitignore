@@ -39,3 +39,4 @@ coevo/*.npz
 struct/struct_*.npz
 fusion/*.npz
 dbs/
+splits/

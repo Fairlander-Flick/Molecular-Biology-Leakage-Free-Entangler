@@ -333,7 +333,19 @@ class PPIPairDataset:
         import torch
         self.torch = torch
         self.emb_path = str(emb_path or (C.EMB_DIR / "embeddings.h5"))
-        pairs_by_split, _, _ = build_manifest(data_dir)
+        # PPI_SPLIT_DIR overrides the default Bernett-strict (C3) split with a
+        # custom leakage regime: read pairs from {PPI_SPLIT_DIR}/{split}.tsv
+        # (lines "a b y"). Used for the C1/C2/C3 regime sweep (see resplit.py).
+        split_dir = os.environ.get("PPI_SPLIT_DIR")
+        if split_dir:
+            rows = []
+            with open(Path(split_dir) / f"{split}.tsv") as fh:
+                for line in fh:
+                    a, b, y = line.split()
+                    rows.append((a, b, int(y)))
+            pairs_by_split = {split: rows}
+        else:
+            pairs_by_split, _, _ = build_manifest(data_dir)
         # Read only small metadata up front; close the handle so it is not
         # inherited across DataLoader fork (h5py handles are NOT fork-safe).
         with h5py.File(self.emb_path, "r") as f:
