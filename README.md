@@ -10,9 +10,6 @@ The benchmark is *leakage-free*: train/val/test partitions are split so that no 
 (~0.8+) reported by sequence-similarity-leaking methods down to a realistic ~0.5–0.65.
 Beating 0.65 *honestly* is the objective.
 
-> 📊 **Class presentation script:** [`PRESENTATION.md`](PRESENTATION.md) — slide-by-slide
-> talking points + plain-language notes for the C1/C2/C3 leakage-regime findings.
-
 ## Core idea — Bilingual Multi-Scale Entangler (BMSE)
 
 Two protein "languages" are fused:
@@ -86,6 +83,35 @@ its context. Resume commands in [`RUNBOOK.md`](RUNBOOK.md).
 - **Track B — structure** (`struct/`): ESMFold infeasible on 10 GB → ESM2 contact-map
   descriptors (`contacts.py`).
 - **Fusion** (`fusion/`): LightGBM stacking BMSE + phylo + structure + coevolution.
+
+## Repository map
+
+**Core model & data**
+| File | Purpose |
+|---|---|
+| `config.py` | Central config: paths, hyperparameters, hardware-aware batch sizes. |
+| `dataset.py` | Bernett data loading, PLM embedding extraction → HDF5 cache, `PPIPairDataset`. |
+| `models.py` | The **BMSE** model: cross-chain attention + multi-scale CNN over ESM2+ProstT5. |
+| `train.py` | Training loop (AMP, AdamW, contrastive loss, degree-leakage check) → `test_metrics.json`. |
+| `visualize.py` | Training curves & metric plots. |
+
+**Leakage-regime sweep (C1/C2/C3 — main finding)**
+| File | Purpose |
+|---|---|
+| `resplit.py` | Re-partitions the one cache into **C1** (random edges), **C2** (one-novel protein), C3=original. |
+| `regime_curve.py` | Reads `runs/{c1,c2,bmse2}` → the regime table + `regime_curve.png`. |
+| `watch_regime.sh` | Waits for the C1/C2 jobs, then emits the regime table. |
+
+**Explored tracks (honest negative results — see RESULTS.md)**
+| Dir | Purpose |
+|---|---|
+| `msa/`, `coevo/` | Track A: co-evolution / phylogenetic profiling (weak, AUROC 0.537). |
+| `struct/` | Track B: ESM2 contact-map structure descriptors (≈ random). |
+| `fusion/` | LightGBM stacking of all tracks (≈ baseline — tracks add ~0). |
+
+**SLURM job wrappers:** `train.sh`, `extract_array.sh`, `predict.sh`, `predict_bmse.py`.
+
+**Docs:** `RESULTS.md` (full log) · `ROADMAP.md` (plan) · `RUNBOOK.md` (resume) · `HARDWARE.md`.
 
 ## Environment
 

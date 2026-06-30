@@ -40,3 +40,9 @@ struct/struct_*.npz
 fusion/*.npz
 dbs/
 splits/
+
+# scratch / job-id markers / stray logs
+.*_jid
+*.log
+fusion/fusion_metrics.json
+fusion/fusion_lgb.txt
