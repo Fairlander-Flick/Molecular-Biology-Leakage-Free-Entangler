@@ -174,10 +174,13 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="debug: cap pairs/split")
     ap.add_argument("--ablation", choices=["full","esm","prostt5"], default="full")
     ap.add_argument("--out", type=str, default=str(C.RUN_DIR / "bmse"))
+    ap.add_argument("--seed", type=int, default=C.SEED, help="ensemble: vary per run")
+    ap.add_argument("--dropout", type=float, default=0.1, help="anti-overfit: raise")
+    ap.add_argument("--d-model", type=int, default=256)
     a = ap.parse_args()
 
     C.apply_runtime_flags()
-    torch.manual_seed(C.SEED); np.random.seed(C.SEED)
+    torch.manual_seed(a.seed); np.random.seed(a.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     part = "a100" if "a100" in torch.cuda.get_device_name(0).lower() else "rtx3080" \
         if device == "cuda" else "rtx3080"
@@ -202,7 +205,7 @@ def main():
                            num_workers=a.workers, pin_memory=C.PIN_MEMORY),
     }
 
-    model = build_model().to(device)
+    model = build_model(d_model=a.d_model, p=a.dropout).to(device)
     if a.compile:
         model = torch.compile(model, mode=C.PRECISION.compile_mode)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
