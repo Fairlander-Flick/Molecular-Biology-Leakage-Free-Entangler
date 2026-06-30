@@ -29,14 +29,15 @@ RUN_DIR = PROJECT_ROOT / "runs"
 # --------------------------------------------------------------------------- #
 # Encoders
 # --------------------------------------------------------------------------- #
-ESM2_MODEL = "facebook/esm2_t33_650M_UR50D"   # 650M, 33 layers, dim 1280
+# Default 650M; override to esm2_t36_3B (dim 2560) via env for the bigger-PLM run.
+ESM2_MODEL = os.environ.get("PPI_ESM2_MODEL", "facebook/esm2_t33_650M_UR50D")  # 650M, dim 1280
 # ProstT5 ships only pytorch_model.bin; transformers 5.12 refuses torch.load on
 # torch<2.6. We pre-convert to safetensors into a standalone local dir and load
 # from there (avoids HF offline-cache resolution of the manually-added file).
 PROSTT5_MODEL = os.environ.get("PROSTT5_PATH", str(WOODY / "hf_cache/prostt5_local"))
 # ESMFold (Track B) — same .bin/torch<2.6 issue; pre-converted to a local safetensors dir.
 ESMFOLD_MODEL = os.environ.get("ESMFOLD_PATH", str(WOODY / "hf_cache/esmfold_local"))
-ESM2_DIM = 1280
+ESM2_DIM = int(os.environ.get("PPI_ESM2_DIM", "1280"))   # 1280 (650M) | 2560 (3B)
 PROSTT5_DIM = 1024
 # Two-tier length policy: embed full up to the cap; longer proteins -> head512+tail512.
 # Cap 1024 covers full length for 85.7% of proteins (vs 55.7% at 512).
@@ -103,7 +104,8 @@ def apply_runtime_flags() -> None:
 # --------------------------------------------------------------------------- #
 # Length-bucketed extraction: token budget per forward pass (sum of residues in a
 # batch). ProstT5 (~3B) is heavier than ESM2 (650M); tuned conservative for 10 GB.
-EXTRACT_MAX_TOKENS = {"esm2": 4096, "prostt5": 1024}
+EXTRACT_MAX_TOKENS = {"esm2": int(os.environ.get("PPI_ESM2_MAXTOK", "4096")),
+                      "prostt5": 1024}   # 3B esm2 needs ~1024 to fit 10 GB
 
 TRAIN_BATCH = {    # pair-samples per step. Cross-chain attention is O(B*La*Lb),
     "a100": 48,    # so memory is dominated by per-residue length, not the head.

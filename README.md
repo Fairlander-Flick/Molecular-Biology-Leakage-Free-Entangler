@@ -111,7 +111,7 @@ its context. Resume commands in [`RUNBOOK.md`](RUNBOOK.md).
 
 **SLURM job wrappers:** `train.sh`, `extract_array.sh`, `predict.sh`, `predict_bmse.py`.
 
-**Docs:** `RESULTS.md` (full log) · `ROADMAP.md` (plan) · `RUNBOOK.md` (resume) · `HARDWARE.md`.
+**Docs:** [`FINDINGS.md`](FINDINGS.md) (everything we tried → scores → decision) · `RESULTS.md` (raw log) · `ROADMAP.md` (plan) · `RUNBOOK.md` (resume) · `HARDWARE.md`.
 
 ## Environment
 
