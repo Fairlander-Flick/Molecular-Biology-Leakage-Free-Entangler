@@ -33,11 +33,11 @@ theoretical ceiling.)
 | 4 | Track A — phylogenetic profiling (standalone) | — | 0.537 | ❌ weak |
 | 5 | Track B — structure (ESM2 contact maps) | 0.518 | ~0.52 | ❌ ≈ random |
 | 6 | Fusion (BMSE + phylo + structure, LightGBM stack) | 0.646 | 0.709 | ❌ adds ~0 |
-| 7 | **C1** regime (both proteins seen — leaky) | _running_ | _val ~0.78_ | leakage demo |
-| 8 | **C2** regime (one protein novel — realistic) | _running_ | _val ~0.73_ | the honest real number |
-| 9 | **3B-PLM upgrade** (ESM2-650M → 3B embeddings) | _in progress_ | — | real ceiling-raiser |
+| 7 | **C1** regime (both proteins seen — leaky) | **0.738** | **0.814** | leakage demo |
+| 8 | **C2** regime (one protein novel — realistic) | **0.678** | **0.747** | the honest real number |
+| 9 | **3B-PLM upgrade** (ESM2-650M → 3B embeddings) | _retraining_ | — | real ceiling-raiser |
 
-*(C1/C2 final numbers + the 3B retrain fill in as jobs finish; `val` = preliminary.)*
+*(650M regime sweep is final; the 3B retrain (C1/C2/C3 on dim-2560 embeddings) fills in next.)*
 
 ---
 
@@ -83,9 +83,12 @@ embeddings, re-partitioned:
   **zero leakage** by construction.
 - **C3** — the original Bernett strict split (both proteins novel) = **0.660**.
 
-Preliminary (epoch 2, still climbing): C1 val_acc 0.703 / AUROC 0.776 (deg_corr
-+0.09), C2 val_acc 0.665 / AUROC 0.729 (deg_corr −0.06). The curve **goes down as
-leakage is removed** — exactly the effect, now quantified on one controlled dataset.
+**Final (650M):** C1 **0.738 acc / 0.814 AUROC** (deg_corr +0.09 — leakage
+fingerprint visible), C2 **0.678 / 0.747** (clean), C3 **0.660 / 0.721** (clean).
+The curve **drops monotonically as leakage is removed** — exactly the effect, now
+quantified on one controlled dataset. AUROC spread C1→C3 = **0.814 → 0.721**: a
+paper reporting only the leaky C1 number would look ~9 AUROC points better than the
+honest strict result.
 
 ### Step 9 — bigger protein language model (in progress)
 The single biggest real lever in PPI is embedding quality. We're upgrading
