@@ -10,6 +10,9 @@ The benchmark is *leakage-free*: train/val/test partitions are split so that no 
 (~0.8+) reported by sequence-similarity-leaking methods down to a realistic ~0.5–0.65.
 Beating 0.65 *honestly* is the objective.
 
+> 📊 **Class presentation script:** [`PRESENTATION.md`](PRESENTATION.md) — slide-by-slide
+> talking points + plain-language notes for the C1/C2/C3 leakage-regime findings.
+
 ## Core idea — Bilingual Multi-Scale Entangler (BMSE)
 
 Two protein "languages" are fused:
