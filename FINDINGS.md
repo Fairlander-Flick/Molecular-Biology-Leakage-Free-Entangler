@@ -35,9 +35,31 @@ theoretical ceiling.)
 | 6 | Fusion (BMSE + phylo + structure, LightGBM stack) | 0.646 | 0.709 | ❌ adds ~0 |
 | 7 | **C1** regime (both proteins seen — leaky) | **0.738** | **0.814** | leakage demo |
 | 8 | **C2** regime (one protein novel — realistic) | **0.678** | **0.747** | the honest real number |
-| 9 | **3B-PLM upgrade** (ESM2-650M → 3B embeddings) | _retraining_ | — | real ceiling-raiser |
+| 9 | **3B-PLM + 3-seed ensemble** (best honest setup) | **C2 0.691 / C3 0.674** | **C2 0.767 / C3 0.736** | ✅ beats 650M |
 
-*(650M regime sweep is final; the 3B retrain (C1/C2/C3 on dim-2560 embeddings) fills in next.)*
+---
+
+## 3b. FINAL master results (650M → 3B → ensemble → anti-overfit)
+
+| Setup | acc | AUROC | AUPRC | MCC |
+|---|---|---|---|---|
+| C1 650M | 0.738 | 0.814 | 0.807 | 0.477 |
+| C1 3B | 0.739 | 0.817 | 0.812 | 0.479 |
+| C2 650M | 0.678 | 0.747 | 0.746 | 0.360 |
+| C2 3B | 0.690 | 0.757 | 0.753 | 0.383 |
+| **C2 3B ensemble(3)** | **0.691** | **0.767** | **0.767** | **0.388** |
+| C3 650M | 0.660 | 0.721 | 0.708 | 0.320 |
+| C3 3B (single) | 0.659 | 0.714 | 0.704 | 0.318 |
+| **C3 3B ensemble(3)** | **0.674** | **0.736** | **0.725** | **0.348** |
+| C3 3B anti-overfit | 0.665 | 0.725 | 0.718 | 0.331 |
+
+**The headline finding:** naive 3B *alone* overfits and does **not** beat 650M on the
+strict C3 (0.714 vs 0.721). But **ensembling 3 seeds pushes C3 to 0.736 AUROC
+(+0.015 over the 650M baseline) and C2 to 0.767 (+0.020)** — and the anti-overfit
+run (0.725) also beats single 3B. So the leakage-free ceiling is **not** fixed: it
+moves up with better optimization (scale + ensembling + regularization). This is the
+honest, defensible rebuttal — *"leakage-free PPI is optimizable, not near-random;
+Bernett's collapse reflects under-powered single models."*
 
 ---
 
